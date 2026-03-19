@@ -39,6 +39,9 @@ uvicorn app.api:app --reload --host 0.0.0.0 --port 8000
 - `POST /threads`: 새 `thread_id` 발급
 - `POST /chat`: 대화 실행(필요 시 승인 인터럽트 반환)
 - `POST /chat/approval`: 승인/거절 값으로 인터럽트 지점 재개
+- `GET /v1/models`: OpenAI 호환 모델 목록
+- `POST /v1/chat/completions`: OpenAI Chat Completions 호환 API
+- `POST /v1/responses`: OpenAI Responses 호환 API
 
 예시 요청:
 
@@ -60,6 +63,28 @@ curl -s http://localhost:8000/chat -X POST \
 curl -s http://localhost:8000/chat/approval -X POST \
   -H "Content-Type: application/json" \
   -d '{"thread_id":"<THREAD_ID>","decision":"approved"}'
+
+# 5) OpenAI Chat Completions 호환 호출
+curl -s http://localhost:8000/v1/chat/completions -X POST \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer test-key" \
+  -d '{
+    "model":"corp-gpt",
+    "messages":[
+      {"role":"developer","content":"답변을 간결하게 해줘"},
+      {"role":"user","content":"환불 정책 알려줘"}
+    ]
+  }'
+
+# 6) OpenAI Responses 호환 호출
+curl -s http://localhost:8000/v1/responses -X POST \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer test-key" \
+  -d '{
+    "model":"corp-gpt",
+    "instructions":"핵심만 답변해줘",
+    "input":"환불 정책 알려줘"
+  }'
 ```
 
 ## 시작점(Entry Point)과 실행 흐름
