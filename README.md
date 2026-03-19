@@ -14,12 +14,8 @@
 
 ## 실행 방법
 
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -e .
-python -m app.main
-```
+> 참고: 기존 `python -m app.main` CLI 데모 엔트리는 제거되었습니다.
+> 현재는 HTTP API(FastAPI) 방식으로 실행합니다.
 
 
 ## FastAPI 서버 실행
@@ -89,15 +85,15 @@ curl -s http://localhost:8000/v1/responses -X POST \
 
 ## 시작점(Entry Point)과 실행 흐름
 
-- **실행 시작점**: `app/main.py` 의 `main()` 함수 (`python -m app.main`으로 호출됨)
-- `main()` 내부에서 `build_app()`를 호출해 LangGraph app을 생성
+- **실행 시작점**: `app/api.py` 의 FastAPI 앱 (`uvicorn app.api:app ...`로 호출)
+- API 계층에서 `build_app()`를 호출해 LangGraph app을 생성
 - 사용자 입력을 `app.invoke(...)`로 전달하면 그래프가 `START -> ingest -> route` 순서로 실행
 - `route` 판단에 따라 `direct/retrieval/action` 경로로 분기
 - `action` 경로에서 `approval_interrupt`가 발생하면, 같은 `thread_id`로 `Command(resume=...)`를 호출해 이어서 실행
 
 핵심 파일:
 
-- `app/main.py`: CLI 실행/재개 처리
+- `app/main.py`: 비-CLI 실행 헬퍼(run/resume/thread_id)
 - `app/graph.py`: 노드/엣지 조립, checkpointer 설정
 - `app/retrieval.py`: 검색형 워크플로우
 - `app/action.py`: 승인 기반 액션 워크플로우
@@ -124,7 +120,7 @@ curl -s http://localhost:8000/v1/responses -X POST \
 ```text
 app/
   __init__.py
-  main.py                 # CLI 데모 엔트리
+  main.py                 # 비-CLI 실행 헬퍼
   graph.py                # LangGraph 조립
   state.py                # State 정의
   routing.py              # 요청 분기/플래닝 로직
