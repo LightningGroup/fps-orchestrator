@@ -1,6 +1,6 @@
 # LangGraph 기반 LLM 오케스트레이션 프로젝트
 
-Python `LangGraph`와 `FastAPI`로 구성한 LLM 오케스트레이션 예제입니다.
+Python `LangGraph`와 `FastAPI`로 구성한 LLM 오케스트레이션.
 
 ## 기술 스택
 
