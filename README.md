@@ -21,6 +21,21 @@ pip install -e .
 python -m app.main
 ```
 
+## 시작점(Entry Point)과 실행 흐름
+
+- **실행 시작점**: `app/main.py` 의 `main()` 함수 (`python -m app.main`으로 호출됨)
+- `main()` 내부에서 `build_app()`를 호출해 LangGraph app을 생성
+- 사용자 입력을 `app.invoke(...)`로 전달하면 그래프가 `START -> ingest -> route` 순서로 실행
+- `route` 판단에 따라 `direct/retrieval/action` 경로로 분기
+- `action` 경로에서 `approval_interrupt`가 발생하면, 같은 `thread_id`로 `Command(resume=...)`를 호출해 이어서 실행
+
+핵심 파일:
+
+- `app/main.py`: CLI 실행/재개 처리
+- `app/graph.py`: 노드/엣지 조립, checkpointer 설정
+- `app/retrieval.py`: 검색형 워크플로우
+- `app/action.py`: 승인 기반 액션 워크플로우
+
 ## 사용 예시
 
 ### 1) Retrieval 요청
@@ -59,3 +74,32 @@ app/
 - 실제 벡터DB 연결: `vector_store.py` 를 Chroma/Pinecone/pgvector로 교체
 - 실제 도구 실행: `tools.py`를 메일/DB/API 클라이언트로 교체
 - 모니터링: LangSmith 또는 OpenTelemetry 연동
+
+## 벡터 DB 연결 방법 (실전 전환 가이드)
+
+현재 코드는 `app/retrieval.py`에서 아래처럼 전역 저장소를 사용합니다.
+
+- `vector_store = InMemoryVectorStore.bootstrap()`
+- `retrieve_docs()`에서 `vector_store.search(...)` 호출
+
+즉, **연결 지점은 `app/retrieval.py`의 `vector_store` 객체**입니다.  
+실제 벡터 DB로 바꿀 때는 아래 2단계로 진행하면 됩니다.
+
+1. `app/vector_store.py`에 실제 DB 클라이언트 래퍼 클래스 구현
+   - 예: `class ChromaVectorStore`, `class PgVectorStore`
+   - `search(query, top_k)` 메서드 시그니처를 동일하게 유지
+2. `app/retrieval.py`에서 생성 객체만 교체
+   - 예: `vector_store = ChromaVectorStore.from_env()`
+
+권장 환경변수 예시:
+
+- `VECTOR_DB_PROVIDER=chroma|pinecone|pgvector`
+- `VECTOR_DB_URL=...`
+- `VECTOR_DB_API_KEY=...` (필요 시)
+- `VECTOR_DB_COLLECTION=...`
+
+운영 팁:
+
+- 검색 결과 품질을 위해 문서 임베딩 생성 파이프라인(ingestion)을 별도 운영
+- top_k/필터 조건/메타데이터 스키마(문서 id, 출처, 업데이트 시각)를 함께 설계
+- 현재 `MemorySaver`는 인메모리이므로, 운영 환경에서는 영속 체크포인터 사용 권장

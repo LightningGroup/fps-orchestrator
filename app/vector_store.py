@@ -5,12 +5,18 @@ from dataclasses import dataclass
 
 @dataclass
 class InMemoryVectorStore:
-    """데모용 의미 검색 저장소(간단 키워드 매칭)."""
+    """데모용 의미 검색 저장소(간단 키워드 매칭).
+
+    주의:
+    - 실제 '벡터 임베딩' 계산은 하지 않습니다.
+    - query 토큰이 문서 문자열(title + text)에 포함되는지로 점수화합니다.
+    """
 
     docs: list[dict[str, str]]
 
     @classmethod
     def bootstrap(cls) -> "InMemoryVectorStore":
+        """데모 문서를 메모리에 로드해 기본 스토어 생성."""
         return cls(
             docs=[
                 {
@@ -32,13 +38,21 @@ class InMemoryVectorStore:
         )
 
     def search(self, query: str, top_k: int = 3) -> list[dict[str, str]]:
+        """질의 문자열과 문서 문자열 간 단순 토큰 매칭 검색.
+
+        Args:
+            query: 사용자 질의(또는 재작성 질의)
+            top_k: 반환할 최대 문서 수
+        """
         q_tokens = set(query.lower().split())
 
         scored: list[tuple[int, dict[str, str]]] = []
         for d in self.docs:
+            # title/text를 하나의 corpus로 보고, 질의 토큰 포함 개수를 score로 사용
             corpus = f"{d['title']} {d['text']}".lower()
             score = sum(1 for t in q_tokens if t in corpus)
             scored.append((score, d))
 
+        # 점수 높은 순 정렬 후, score>0인 문서만 반환
         scored.sort(key=lambda x: x[0], reverse=True)
         return [doc for score, doc in scored[:top_k] if score > 0]
